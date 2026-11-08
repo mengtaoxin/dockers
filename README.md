@@ -20,8 +20,8 @@ Personal collection of Docker Compose stacks. Each stack is versioned and, on up
 
 GitHub Actions detects changed stacks that have both `Dockerfile` and `VERSION`, then pushes:
 
-- `ghcr.io/<owner>/dockers-<stack>:<version>`
-- `ghcr.io/<owner>/dockers-<stack>:latest`
+- `ghcr.io/<owner>/<stack>:<version>`
+- `ghcr.io/<owner>/<stack>:latest`
 
 After the first push, open the package on GitHub and set visibility to **Public** if others need to pull it.
 
@@ -34,6 +34,6 @@ cd hello-world
 VERSION=$(tr -d '[:space:]' < VERSION) docker compose up --build
 ```
 
-Image (after publish): `ghcr.io/<owner>/dockers-hello-world:0.1.0`
+Image (after publish): `ghcr.io/<owner>/hello-world:0.1.0`
 
 Local builds default `GITHUB_OWNER` to `local` when unset.

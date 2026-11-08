@@ -98,7 +98,7 @@ jobs:
           set -euo pipefail
           owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
           stack="$(echo '${{ matrix.stack }}' | tr '[:upper:]' '[:lower:]')"
-          echo "name=ghcr.io/${owner}/dockers-${stack}" >> "${GITHUB_OUTPUT}"
+          echo "name=ghcr.io/${owner}/${stack}" >> "${GITHUB_OUTPUT}"
 
       - name: Build and push
         uses: docker/build-push-action@v6
