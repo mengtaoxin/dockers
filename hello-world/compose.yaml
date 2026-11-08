@@ -1,0 +1,5 @@
+services:
+  hello:
+    image: ghcr.io/${GITHUB_OWNER:-local}/dockers-hello-world:${VERSION:-0.1.0}
+    build:
+      context: .
