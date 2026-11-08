@@ -1,6 +1,6 @@
 services:
   nodejs-a:
-    image: ghcr.io/${GITHUB_OWNER:-local}/nodejs-a:${VERSION:-0.1.1}
+    image: ghcr.io/${GITHUB_OWNER:-local}/nodejs-a:${VERSION:-0.2.0}
     build:
       context: .
     ports:
@@ -8,18 +8,20 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
       MYSQL_SCHEMA_NAME: ${MYSQL_SCHEMA_NAME:-}
+      # Published ports need a non-loopback bind inside the container.
+      MYSQL_BIND_ADDRESS: ${MYSQL_BIND_ADDRESS:-0.0.0.0}
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "mysqladmin --socket=/var/run/mysqld/mysqld.sock --user=root --password=$$MYSQL_ROOT_PASSWORD ping --silent",
+          "sudo mysqladmin --socket=/var/run/mysqld/mysqld.sock --user=root --password=$$MYSQL_ROOT_PASSWORD ping --silent",
         ]
       interval: 5s
       timeout: 5s
       retries: 12
-      start_period: 20s
+      start_period: 25s
 
 volumes:
   mysql-data:
