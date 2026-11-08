@@ -1,0 +1,8 @@
+.git
+.env
+.env.*
+*.md
+.DS_Store
+test.sh
+VERSION
+compose.yaml

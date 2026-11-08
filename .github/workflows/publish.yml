@@ -24,42 +24,46 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          list_stacks() {
-            for dir in */; do
-              name="${dir%/}"
-              if [[ -f "${name}/Dockerfile" && -f "${name}/VERSION" ]]; then
-                printf '%s\n' "${name}"
-              fi
-            done
-          }
-
           before="${{ github.event.before }}"
-          if [[ -z "${before}" || "${before}" =~ ^0+$ ]]; then
-            mapfile -t stacks < <(list_stacks)
-          else
-            mapfile -t changed < <(git diff --name-only "${before}" "${{ github.sha }}" | awk -F/ 'NF>1 {print $1}' | sort -u)
-            stacks=()
-            for name in "${changed[@]}"; do
-              if [[ -f "${name}/Dockerfile" && -f "${name}/VERSION" ]]; then
-                stacks+=("${name}")
-              fi
-            done
-          fi
-
-          if [[ ${#stacks[@]} -eq 0 ]]; then
-            echo "stacks=[]" >> "${GITHUB_OUTPUT}"
-            echo "No publishable stacks changed."
-            exit 0
-          fi
-
-          json=$(printf '%s\n' "${stacks[@]}" | jq -R . | jq -cs .)
+          after="${{ github.sha }}"
+          json="$(bash .github/scripts/detect-stacks.sh "${before}" "${after}")"
           echo "stacks=${json}" >> "${GITHUB_OUTPUT}"
           echo "Publishing stacks: ${json}"
 
-  publish:
+  test:
     needs: detect
     if: needs.detect.outputs.stacks != '[]' && needs.detect.outputs.stacks != ''
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: ${{ fromJSON(needs.detect.outputs.stacks) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run stack tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          stack="${{ matrix.stack }}"
+          if [[ ! -x "${stack}/test.sh" ]]; then
+            echo "missing executable ${stack}/test.sh" >&2
+            exit 1
+          fi
+          bash "${stack}/test.sh"
+
+  publish:
+    needs: [detect, test]
+    if: |
+      always() &&
+      needs.detect.result == 'success' &&
+      needs.detect.outputs.stacks != '[]' &&
+      needs.detect.outputs.stacks != '' &&
+      needs.test.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

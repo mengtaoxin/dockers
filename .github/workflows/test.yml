@@ -1,0 +1,59 @@
+name: Test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      stacks: ${{ steps.changes.outputs.stacks }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed stacks
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          before="${{ github.event.pull_request.base.sha }}"
+          after="${{ github.sha }}"
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            before=""
+          fi
+          json="$(bash .github/scripts/detect-stacks.sh "${before}" "${after}")"
+          echo "stacks=${json}" >> "${GITHUB_OUTPUT}"
+          echo "Testing stacks: ${json}"
+
+  test:
+    needs: detect
+    if: needs.detect.outputs.stacks != '[]' && needs.detect.outputs.stacks != ''
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: ${{ fromJSON(needs.detect.outputs.stacks) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run stack tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          stack="${{ matrix.stack }}"
+          if [[ ! -x "${stack}/test.sh" ]]; then
+            echo "missing executable ${stack}/test.sh" >&2
+            exit 1
+          fi
+          bash "${stack}/test.sh"
