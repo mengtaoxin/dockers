@@ -19,7 +19,7 @@ Personal collection of Docker Compose stacks. Each stack is versioned and, on up
 | Stack | Description |
 | --- | --- |
 | [hello-world](./hello-world/) | Minimal smoke-test stack |
-| [nodejs-a](./nodejs-a/) | Ubuntu 24.04 + Node.js 24 + process-local MySQL 8 |
+| [ubuntu-a](./ubuntu-a/) | Ubuntu 24.04 + Node.js 24 + process-local MySQL 8 |
 
 ## Versioning and publish
 
@@ -43,7 +43,7 @@ Run a stack's smoke test locally (Docker required):
 
 ```bash
 ./hello-world/test.sh
-./nodejs-a/test.sh
+./ubuntu-a/test.sh
 ```
 
 CI detects changed stacks (or all stacks when `.github/` changes) and runs each stack's `test.sh`. Publish on `main` is gated on those tests succeeding.

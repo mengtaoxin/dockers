@@ -1,4 +1,4 @@
-# nodejs-a
+# ubuntu-a
 
 Generic Ubuntu 24.04 image for Node.js agents / CI / app test containers:
 
@@ -19,7 +19,7 @@ Environment variables:
 | `MYSQL_BIND_ADDRESS` | no | mysqld bind address (default `127.0.0.1`; compose sets `0.0.0.0` for published ports) |
 
 ```bash
-cd nodejs-a
+cd ubuntu-a
 export MYSQL_ROOT_PASSWORD=secret
 export MYSQL_SCHEMA_NAME=app
 VERSION=$(tr -d '[:space:]' < VERSION) docker compose up --build
@@ -31,7 +31,7 @@ One-shot command (MySQL is up before `node` runs):
 docker run --rm \
   -e MYSQL_ROOT_PASSWORD=secret \
   -e MYSQL_SCHEMA_NAME=app \
-  ghcr.io/<owner>/nodejs-a:0.2.0 \
+  ghcr.io/<owner>/ubuntu-a:0.2.0 \
   node -e "console.log('ok')"
 ```
 
@@ -43,4 +43,4 @@ export MYSQL_SCHEMA_NAME=app
 mysql-ensure-ready
 ```
 
-Image (after publish): `ghcr.io/<owner>/nodejs-a:0.2.0`
+Image (after publish): `ghcr.io/<owner>/ubuntu-a:0.2.0`

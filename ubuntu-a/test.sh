@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-IMAGE="dockers-test/nodejs-a:test"
-NAME="nodejs-a-test-$$"
+IMAGE="dockers-test/ubuntu-a:test"
+NAME="ubuntu-a-test-$$"
 PASS="test-pass-$$"
 SCHEMA="app"
 
@@ -18,7 +18,16 @@ if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
   exit 1
 fi
 
-for required in Dockerfile compose.yaml docker-entrypoint.sh mysql-ensure-ready.sh; do
+for required in \
+  Dockerfile \
+  compose.yaml \
+  docker-entrypoint.sh \
+  mysql-ensure-ready.sh \
+  scripts/install-base.sh \
+  scripts/install-node.sh \
+  scripts/install-playwright-deps.sh \
+  scripts/setup-ubuntu-user.sh
+do
   if [[ ! -f "${ROOT}/${required}" ]]; then
     echo "missing ${required}" >&2
     exit 1
@@ -82,4 +91,4 @@ docker exec -e MYSQL_ROOT_PASSWORD="${PASS}" -e MYSQL_SCHEMA_NAME="${SCHEMA}" \
 status="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${NAME}")"
 echo "health=${status}"
 
-echo "nodejs-a OK (${version})"
+echo "ubuntu-a OK (${version})"

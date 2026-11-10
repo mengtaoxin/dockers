@@ -1,6 +1,6 @@
 services:
-  nodejs-a:
-    image: ghcr.io/${GITHUB_OWNER:-local}/nodejs-a:${VERSION:-0.2.0}
+  ubuntu-a:
+    image: ghcr.io/${GITHUB_OWNER:-local}/ubuntu-a:${VERSION:-0.2.0}
     build:
       context: .
     ports:
