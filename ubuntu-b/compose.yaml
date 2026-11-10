@@ -1,0 +1,10 @@
+services:
+  ubuntu-b:
+    image: ghcr.io/${GITHUB_OWNER:-local}/ubuntu-b:${VERSION:-0.1.0}
+    build:
+      context: ..
+      dockerfile: ubuntu-b/Dockerfile
+    init: true
+    # Chromium in Docker is more stable with host IPC (Playwright recommendation).
+    ipc: host
+    command: ["sleep", "infinity"]

@@ -8,6 +8,8 @@ Generic Ubuntu 24.04 image for Node.js agents / CI / app test containers:
 - Common tools: `git`, `jq`, `lsof`, `nc`, `curl`
 - Playwright Chromium **OS libraries** (browser binaries still installed at runtime)
 
+Shared build helpers live in repo-root [`scripts/`](../scripts/). Stack-specific scripts (entrypoint, MySQL ensure, install-mysql, tests) are under [`scripts/`](./scripts/).
+
 MySQL is started by `mysql-ensure-ready` (also the image `ENTRYPOINT`) before the container command runs. Credentials are **not** baked into the image; pass them as env on first start (empty datadir).
 
 Environment variables:
@@ -41,6 +43,12 @@ Cloud / host `start` hooks can call the same helper idempotently:
 export MYSQL_ROOT_PASSWORD=secret
 export MYSQL_SCHEMA_NAME=app
 mysql-ensure-ready
+```
+
+Smoke test (from repo root or this directory):
+
+```bash
+./scripts/test.sh
 ```
 
 Image (after publish): `ghcr.io/<owner>/ubuntu-a:0.2.0`

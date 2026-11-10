@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Emit a JSON array of publishable stacks changed between two commits.
 # Usage: detect-stacks.sh <before_sha> <after_sha>
-# If before is empty/all-zeros, or .github/ changed, list all stacks.
+# If before is empty/all-zeros, or .github/ / shared scripts/ changed, list all stacks.
 set -euo pipefail
 
 list_stacks() {
@@ -19,7 +19,7 @@ after="${2:-HEAD}"
 stacks=""
 if [[ -z "${before}" || "${before}" =~ ^0+$ ]]; then
   stacks="$(list_stacks)"
-elif git diff --name-only "${before}" "${after}" | grep -qE '^\.github/'; then
+elif git diff --name-only "${before}" "${after}" | grep -qE '^(\.github/|scripts/)'; then
   stacks="$(list_stacks)"
 else
   changed="$(git diff --name-only "${before}" "${after}" | awk -F/ 'NF>1 {print $1}' | sort -u)"

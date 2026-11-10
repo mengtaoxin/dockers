@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(cd "${ROOT}/.." && pwd)"
 IMAGE="dockers-test/ubuntu-a:test"
 NAME="ubuntu-a-test-$$"
 PASS="test-pass-$$"
@@ -21,12 +22,10 @@ fi
 for required in \
   Dockerfile \
   compose.yaml \
-  docker-entrypoint.sh \
-  mysql-ensure-ready.sh \
-  scripts/install-base.sh \
-  scripts/install-node.sh \
-  scripts/install-playwright-deps.sh \
-  scripts/setup-ubuntu-user.sh
+  scripts/docker-entrypoint.sh \
+  scripts/mysql-ensure-ready.sh \
+  scripts/install-mysql.sh \
+  scripts/install-playwright-deps.sh
 do
   if [[ ! -f "${ROOT}/${required}" ]]; then
     echo "missing ${required}" >&2
@@ -34,7 +33,18 @@ do
   fi
 done
 
-docker build -t "${IMAGE}" "${ROOT}"
+for required in \
+  scripts/install-base.sh \
+  scripts/install-node.sh \
+  scripts/setup-ubuntu-user.sh
+do
+  if [[ ! -f "${REPO_ROOT}/${required}" ]]; then
+    echo "missing ${required}" >&2
+    exit 1
+  fi
+done
+
+docker build -f "${ROOT}/Dockerfile" -t "${IMAGE}" "${REPO_ROOT}"
 
 docker run -d --name "${NAME}" \
   -e MYSQL_ROOT_PASSWORD="${PASS}" \

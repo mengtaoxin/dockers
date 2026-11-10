@@ -1,21 +1,11 @@
 #!/usr/bin/env bash
-# Install base OS packages and prepare process-local MySQL layout.
+# Install MySQL server and prepare process-local datadir / bind config.
 set -euo pipefail
 
 : "${MYSQL_BIND_ADDRESS:=127.0.0.1}"
 
 apt-get update
-apt-get install -y --no-install-recommends \
-  ca-certificates \
-  curl \
-  gnupg \
-  git \
-  jq \
-  lsof \
-  netcat-openbsd \
-  sudo \
-  mysql-server \
-  xz-utils
+apt-get install -y --no-install-recommends mysql-server
 
 mkdir -p /var/run/mysqld
 chown mysql:mysql /var/run/mysqld
@@ -29,3 +19,5 @@ printf '%s\n' \
   "mysqlx-bind-address = ${MYSQL_BIND_ADDRESS}" \
   'skip-name-resolve' \
   > /etc/mysql/mysql.conf.d/docker.cnf
+
+mysqld --version

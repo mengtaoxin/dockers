@@ -19,4 +19,3 @@ curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux
 
 node --version
 npm --version
-mysqld --version

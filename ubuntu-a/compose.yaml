@@ -2,7 +2,8 @@ services:
   ubuntu-a:
     image: ghcr.io/${GITHUB_OWNER:-local}/ubuntu-a:${VERSION:-0.2.0}
     build:
-      context: .
+      context: ..
+      dockerfile: ubuntu-a/Dockerfile
     ports:
       - "127.0.0.1:3306:3306"
     environment:

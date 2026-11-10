@@ -50,11 +50,14 @@ jobs:
         run: |
           set -euo pipefail
           stack="${{ matrix.stack }}"
-          if [[ ! -x "${stack}/test.sh" ]]; then
-            echo "missing executable ${stack}/test.sh" >&2
+          if [[ -x "${stack}/scripts/test.sh" ]]; then
+            bash "${stack}/scripts/test.sh"
+          elif [[ -x "${stack}/test.sh" ]]; then
+            bash "${stack}/test.sh"
+          else
+            echo "missing executable ${stack}/scripts/test.sh or ${stack}/test.sh" >&2
             exit 1
           fi
-          bash "${stack}/test.sh"
 
   publish:
     needs: [detect, test]
@@ -107,7 +110,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./${{ matrix.stack }}
+          context: .
+          file: ./${{ matrix.stack }}/Dockerfile
           push: true
           tags: |
             ${{ steps.image.outputs.name }}:${{ steps.version.outputs.value }}

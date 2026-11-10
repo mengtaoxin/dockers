@@ -1,0 +1,10 @@
+.git
+.github
+.env
+.env.*
+**/*.md
+**/.DS_Store
+**/VERSION
+**/compose.yaml
+**/scripts/test.sh
+hello-world/
