@@ -5,6 +5,7 @@ Personal collection of Docker Compose stacks. Each stack is versioned and, on up
 ## Layout
 
 ```text
+docs/                # project policies (e.g. image-build external failures)
 scripts/             # shared build helpers (install-base / install-node / setup-ubuntu-user)
 <stack>/
   README.md          # stack-specific docs
@@ -14,6 +15,8 @@ scripts/             # shared build helpers (install-base / install-node / setup
   scripts/           # stack-specific build / runtime / test scripts
     test.sh          # build + smoke checks for CI / local (some stacks keep test.sh at stack root)
 ```
+
+See [docs/image-build-external-failures.md](./docs/image-build-external-failures.md): do not add resilience workarounds for transient external build/CI failures; re-run when the environment recovers.
 
 ## Stacks
 

@@ -1,0 +1,12 @@
+---
+description: Do not work around transient external image-build/CI failures
+alwaysApply: true
+---
+
+# Image builds: no external-failure workarounds
+
+Do not add tolerance, resilience, or defensive workarounds for transient external build/CI failures (GitHub Actions, apt mirrors, DNS, registries, flaky runners, etc.).
+
+If the failure is external, leave the build path simple, fail clearly, and re-run the workflow after the environment recovers. Fix only real bugs in our Dockerfiles and scripts.
+
+Rationale: [docs/image-build-external-failures.md](../../docs/image-build-external-failures.md)
