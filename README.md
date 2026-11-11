@@ -20,6 +20,7 @@ scripts/             # shared build helpers (install-base / install-node / setup
 | Stack | Description |
 | --- | --- |
 | [hello-world](./hello-world/) | Minimal smoke-test stack |
+| [github-actions-runner-a](./github-actions-runner-a/) | Official Actions runner + sshpass / smbclient / MySQL 8 / gh |
 | [ubuntu-a](./ubuntu-a/) | Ubuntu 24.04 + Node.js 24 + process-local MySQL 8 |
 | [ubuntu-b](./ubuntu-b/) | Ubuntu 24.04 + Node.js 24 + Playwright browsers |
 
@@ -45,6 +46,7 @@ Run a stack's smoke test locally (Docker required):
 
 ```bash
 ./hello-world/test.sh
+./github-actions-runner-a/scripts/test.sh
 ./ubuntu-a/scripts/test.sh
 ./ubuntu-b/scripts/test.sh
 ```

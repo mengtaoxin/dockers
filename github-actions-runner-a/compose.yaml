@@ -1,0 +1,25 @@
+services:
+  github-actions-runner-a:
+    image: ghcr.io/${GITHUB_OWNER:-local}/github-actions-runner-a:${VERSION:-0.1.0}
+    build:
+      context: ..
+      dockerfile: github-actions-runner-a/Dockerfile
+    environment:
+      GITHUB_URL: ${GITHUB_URL:?set GITHUB_URL}
+      GITHUB_PAT: ${GITHUB_PAT:?set GITHUB_PAT}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
+      MYSQL_SCHEMA_NAME: ${MYSQL_SCHEMA_NAME:-}
+      MYSQL_BIND_ADDRESS: ${MYSQL_BIND_ADDRESS:-127.0.0.1}
+      # 1 = speed-oriented mysqld (less durable; for tests/CI). Default 0.
+      MYSQL_TEST_MODE: ${MYSQL_TEST_MODE:-0}
+      RUNNER_NAME: ${RUNNER_NAME:-}
+      RUNNER_LABELS: ${RUNNER_LABELS:-}
+      RUNNER_GROUP: ${RUNNER_GROUP:-Default}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    # Optional: let workflow steps use the host Docker daemon.
+    # - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
