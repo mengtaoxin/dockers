@@ -112,6 +112,9 @@ jobs:
         with:
           context: .
           file: ./${{ matrix.stack }}/Dockerfile
+          # Host network avoids flaky Docker-bridge DNS on GitHub-hosted runners.
+          network: host
+          allow: network.host
           push: true
           tags: |
             ${{ steps.image.outputs.name }}:${{ steps.version.outputs.value }}

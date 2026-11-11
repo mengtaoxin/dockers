@@ -45,7 +45,7 @@ do
   fi
 done
 
-docker build -f "${ROOT}/Dockerfile" -t "${IMAGE}" "${REPO_ROOT}"
+docker build --network=host -f "${ROOT}/Dockerfile" -t "${IMAGE}" "${REPO_ROOT}"
 
 docker run -d --name "${NAME}" \
   -e MYSQL_ROOT_PASSWORD="${PASS}" \
