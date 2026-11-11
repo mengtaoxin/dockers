@@ -1,6 +1,6 @@
 services:
   github-actions-runner-a:
-    image: ghcr.io/${GITHUB_OWNER:-local}/github-actions-runner-a:${VERSION:-0.1.0}
+    image: ghcr.io/${GITHUB_OWNER:-local}/github-actions-runner-a:${VERSION:-0.2.0}
     build:
       context: ..
       dockerfile: github-actions-runner-a/Dockerfile
@@ -17,8 +17,14 @@ services:
       RUNNER_GROUP: ${RUNNER_GROUP:-Default}
     volumes:
       - mysql-data:/var/lib/mysql
-    # Optional: let workflow steps use the host Docker daemon.
-    # - /var/run/docker.sock:/var/run/docker.sock
+      # Optional: host Docker daemon for workflow steps that need docker.
+      # - /var/run/docker.sock:/var/run/docker.sock
+      # Optional: stack-specific caches (npm, Playwright, _tool, …) — see README.
+      # - npm-cache:/home/runner/.npm
+    # Optional: empty executable workspace per job (uid/gid/size are host-specific).
+    # tmpfs:
+    #   - /home/runner/_work:uid=1001,gid=1001,mode=1777,exec,size=8g
+    # restart pulls a new ephemeral registration after each job exits.
     restart: unless-stopped
 
 volumes:

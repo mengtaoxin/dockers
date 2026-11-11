@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # Start process-local MySQL, then either exec a custom command or register/run the Actions runner.
+#
+# Runner mode is always ephemeral (one job then exit) with self-update disabled.
+# Orchestration (Compose restart / K8s) is responsible for the next cycle.
+#
 # Env (runner mode):
 #   GITHUB_URL  (required)  org or repo URL, e.g. https://github.com/org or https://github.com/org/repo
 #   GITHUB_PAT  (required)  PAT used to mint a short-lived registration token
@@ -7,7 +11,7 @@
 #   RUNNER_NAME    (default: hostname)
 #   RUNNER_LABELS  (default: empty — runner defaults)
 #   RUNNER_GROUP   (default: Default)
-#   RUNNER_WORKDIR (default: _work)
+#   RUNNER_WORKDIR (default: _work → /home/runner/_work)
 set -euo pipefail
 
 mysql-ensure-ready
@@ -93,24 +97,25 @@ remove_runner() {
 
 trap remove_runner EXIT
 
-if [[ ! -f "${RUNNER_HOME}/.runner" ]]; then
-  echo "Configuring runner for ${GITHUB_URL}" >&2
-  reg_token="$(fetch_token "$(api_registration_url "${GITHUB_URL}")")"
-  config_args=(
-    --unattended
-    --url "$(normalize_url "${GITHUB_URL}")"
-    --token "${reg_token}"
-    --name "${RUNNER_NAME:-$(hostname)}"
-    --work "${RUNNER_WORKDIR:-_work}"
-    --replace
-  )
-  if [[ -n "${RUNNER_LABELS:-}" ]]; then
-    config_args+=(--labels "${RUNNER_LABELS}")
-  fi
-  if [[ -n "${RUNNER_GROUP:-}" ]]; then
-    config_args+=(--runnergroup "${RUNNER_GROUP}")
-  fi
-  ./config.sh "${config_args[@]}"
+# Always re-register: ephemeral leaves local .runner after GitHub-side deregistration.
+echo "Configuring ephemeral runner for ${GITHUB_URL}" >&2
+reg_token="$(fetch_token "$(api_registration_url "${GITHUB_URL}")")"
+config_args=(
+  --unattended
+  --url "$(normalize_url "${GITHUB_URL}")"
+  --token "${reg_token}"
+  --name "${RUNNER_NAME:-$(hostname)}"
+  --work "${RUNNER_WORKDIR:-_work}"
+  --replace
+  --ephemeral
+  --disableupdate
+)
+if [[ -n "${RUNNER_LABELS:-}" ]]; then
+  config_args+=(--labels "${RUNNER_LABELS}")
 fi
+if [[ -n "${RUNNER_GROUP:-}" ]]; then
+  config_args+=(--runnergroup "${RUNNER_GROUP}")
+fi
+./config.sh "${config_args[@]}"
 
 exec ./run.sh

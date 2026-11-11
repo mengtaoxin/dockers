@@ -34,6 +34,26 @@ do
   fi
 done
 
+entrypoint="${ROOT}/scripts/docker-entrypoint.sh"
+grep -q -- '--ephemeral' "${entrypoint}" || {
+  echo "entrypoint missing --ephemeral" >&2
+  exit 1
+}
+grep -q -- '--disableupdate' "${entrypoint}" || {
+  echo "entrypoint missing --disableupdate" >&2
+  exit 1
+}
+grep -q 'Configuring ephemeral runner' "${entrypoint}" || {
+  echo "entrypoint missing always-register ephemeral configure path" >&2
+  exit 1
+}
+# Exactly one .runner existence gate is OK (remove_runner); a second would reintroduce skip-on-reuse.
+runner_gate_count="$(grep -cE 'if \[\[ ! -f "\$\{RUNNER_HOME\}/\.runner" \]\]' "${entrypoint}" || true)"
+if [[ "${runner_gate_count}" -ne 1 ]]; then
+  echo "expected exactly one .runner existence check (remove_runner), got ${runner_gate_count}" >&2
+  exit 1
+fi
+
 docker build -f "${ROOT}/Dockerfile" -t "${IMAGE}" "${REPO_ROOT}"
 
 docker run -d --name "${NAME}" \
