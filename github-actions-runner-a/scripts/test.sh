@@ -54,7 +54,7 @@ if [[ "${runner_gate_count}" -ne 1 ]]; then
   exit 1
 fi
 
-docker build --network=host -f "${ROOT}/Dockerfile" -t "${IMAGE}" "${REPO_ROOT}"
+docker build -f "${ROOT}/Dockerfile" -t "${IMAGE}" "${REPO_ROOT}"
 
 docker run -d --name "${NAME}" \
   -e MYSQL_ROOT_PASSWORD="${PASS}" \

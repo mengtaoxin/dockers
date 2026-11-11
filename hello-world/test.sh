@@ -17,7 +17,7 @@ for required in Dockerfile compose.yaml; do
   fi
 done
 
-docker build --network=host -t "${IMAGE}" "${ROOT}"
+docker build -t "${IMAGE}" "${ROOT}"
 
 out="$(docker run --rm "${IMAGE}")"
 expected="Hello from dockers/hello-world"
