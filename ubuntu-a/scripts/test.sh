@@ -5,11 +5,12 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_ROOT="$(cd "${ROOT}/.." && pwd)"
 IMAGE="dockers-test/ubuntu-a:test"
 NAME="ubuntu-a-test-$$"
+NAME_TEST="ubuntu-a-test-mode-$$"
 PASS="test-pass-$$"
 SCHEMA="app"
 
 cleanup() {
-  docker rm -f "${NAME}" >/dev/null 2>&1 || true
+  docker rm -f "${NAME}" "${NAME_TEST}" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -93,6 +94,51 @@ out="$(docker run --rm \
   "${IMAGE}" \
   node -e "process.stdout.write('node-ok')")"
 [[ "${out}" == "node-ok" ]]
+
+# MYSQL_TEST_MODE=1 should apply speed-oriented mysqld settings.
+docker run -d --name "${NAME_TEST}" \
+  -e MYSQL_ROOT_PASSWORD="${PASS}" \
+  -e MYSQL_SCHEMA_NAME="${SCHEMA}" \
+  -e MYSQL_BIND_ADDRESS=127.0.0.1 \
+  -e MYSQL_TEST_MODE=1 \
+  "${IMAGE}"
+
+mysql_test_ready=0
+for _ in $(seq 1 90); do
+  running="$(docker inspect -f '{{.State.Running}}' "${NAME_TEST}" 2>/dev/null || echo false)"
+  if [[ "${running}" != "true" ]]; then
+    echo "MYSQL_TEST_MODE container stopped unexpectedly" >&2
+    docker logs "${NAME_TEST}" >&2 || true
+    exit 1
+  fi
+  if docker exec "${NAME_TEST}" \
+    sudo mysql --protocol=socket --socket=/var/run/mysqld/mysqld.sock \
+    --user=root --password="${PASS}" -N -e "SELECT 1" >/dev/null 2>&1; then
+    mysql_test_ready=1
+    break
+  fi
+  sleep 2
+done
+if [[ "${mysql_test_ready}" -ne 1 ]]; then
+  echo "timed out waiting for MySQL (MYSQL_TEST_MODE=1)" >&2
+  docker logs "${NAME_TEST}" >&2 || true
+  exit 1
+fi
+
+mysql_var() {
+  docker exec "${NAME_TEST}" \
+    sudo mysql --protocol=socket --socket=/var/run/mysqld/mysqld.sock \
+    --user=root --password="${PASS}" -N -e "SELECT @@${1};" \
+    | tr -d '[:space:]'
+}
+flush="$(mysql_var innodb_flush_log_at_trx_commit)"
+doublewrite="$(mysql_var innodb_doublewrite)"
+perf="$(mysql_var performance_schema)"
+log_bin="$(mysql_var log_bin)"
+[[ "${flush}" == "0" ]] || { echo "expected innodb_flush_log_at_trx_commit=0, got ${flush}" >&2; exit 1; }
+[[ "${doublewrite}" =~ ^(0|OFF)$ ]] || { echo "expected innodb_doublewrite off, got ${doublewrite}" >&2; exit 1; }
+[[ "${perf}" =~ ^(0|OFF)$ ]] || { echo "expected performance_schema off, got ${perf}" >&2; exit 1; }
+[[ "${log_bin}" =~ ^(0|OFF)$ ]] || { echo "expected log_bin off, got ${log_bin}" >&2; exit 1; }
 
 # Idempotent ensure from an already-running container.
 docker exec -e MYSQL_ROOT_PASSWORD="${PASS}" -e MYSQL_SCHEMA_NAME="${SCHEMA}" \

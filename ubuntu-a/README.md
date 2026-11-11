@@ -19,6 +19,7 @@ Environment variables:
 | `MYSQL_ROOT_PASSWORD` | yes | MySQL `root` password (applied on first start) |
 | `MYSQL_SCHEMA_NAME` | no | Create this schema on first start (`[A-Za-z0-9_]+`) |
 | `MYSQL_BIND_ADDRESS` | no | mysqld bind address (default `127.0.0.1`; compose sets `0.0.0.0` for published ports) |
+| `MYSQL_TEST_MODE` | no | `0` (default) keeps normal mysqld settings; `1` applies speed-oriented test/CI settings (less fsync / larger caches / fewer logs — not for durable data) |
 
 ```bash
 cd ubuntu-a
@@ -33,7 +34,7 @@ One-shot command (MySQL is up before `node` runs):
 docker run --rm \
   -e MYSQL_ROOT_PASSWORD=secret \
   -e MYSQL_SCHEMA_NAME=app \
-  ghcr.io/<owner>/ubuntu-a:0.2.0 \
+  ghcr.io/<owner>/ubuntu-a:0.3.0 \
   node -e "console.log('ok')"
 ```
 
@@ -51,4 +52,4 @@ Smoke test (from repo root or this directory):
 ./scripts/test.sh
 ```
 
-Image (after publish): `ghcr.io/<owner>/ubuntu-a:0.2.0`
+Image (after publish): `ghcr.io/<owner>/ubuntu-a:0.3.0`

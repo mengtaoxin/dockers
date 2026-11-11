@@ -1,6 +1,6 @@
 services:
   ubuntu-a:
-    image: ghcr.io/${GITHUB_OWNER:-local}/ubuntu-a:${VERSION:-0.2.0}
+    image: ghcr.io/${GITHUB_OWNER:-local}/ubuntu-a:${VERSION:-0.3.0}
     build:
       context: ..
       dockerfile: ubuntu-a/Dockerfile
@@ -11,6 +11,8 @@ services:
       MYSQL_SCHEMA_NAME: ${MYSQL_SCHEMA_NAME:-}
       # Published ports need a non-loopback bind inside the container.
       MYSQL_BIND_ADDRESS: ${MYSQL_BIND_ADDRESS:-0.0.0.0}
+      # 1 = speed-oriented mysqld (less durable; for tests/CI). Default 0.
+      MYSQL_TEST_MODE: ${MYSQL_TEST_MODE:-0}
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
