@@ -4,7 +4,8 @@ set -euo pipefail
 
 : "${MYSQL_BIND_ADDRESS:=127.0.0.1}"
 
-apt-get update
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "${SCRIPT_DIR}/apt-update.sh"
 apt-get install -y --no-install-recommends mysql-server
 
 mkdir -p /var/run/mysqld

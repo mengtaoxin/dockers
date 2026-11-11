@@ -2,7 +2,8 @@
 # Install runner extras: sshpass, smbclient, GitHub CLI (gh).
 set -euo pipefail
 
-apt-get update
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "${SCRIPT_DIR}/apt-update.sh"
 apt-get install -y --no-install-recommends \
   ca-certificates \
   curl \
@@ -19,7 +20,7 @@ arch="$(dpkg --print-architecture)"
 echo "deb [arch=${arch} signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
   > /etc/apt/sources.list.d/github-cli.list
 
-apt-get update
+bash "${SCRIPT_DIR}/apt-update.sh"
 apt-get install -y --no-install-recommends gh
 
 sshpass -V

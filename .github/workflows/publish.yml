@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   detect:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       stacks: ${{ steps.changes.outputs.stacks }}
     steps:
@@ -33,7 +33,7 @@ jobs:
   test:
     needs: detect
     if: needs.detect.outputs.stacks != '[]' && needs.detect.outputs.stacks != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -67,7 +67,7 @@ jobs:
       needs.detect.outputs.stacks != '[]' &&
       needs.detect.outputs.stacks != '' &&
       needs.test.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:

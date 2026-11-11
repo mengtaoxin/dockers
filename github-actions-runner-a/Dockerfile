@@ -12,7 +12,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     MYSQL_DATADIR=/var/lib/mysql \
     MYSQL_BIND_ADDRESS=127.0.0.1
 
-COPY github-actions-runner-a/scripts/install-deps.sh \
+COPY scripts/apt-update.sh \
+     github-actions-runner-a/scripts/install-deps.sh \
      github-actions-runner-a/scripts/install-mysql.sh \
      /tmp/build-scripts/
 RUN chmod +x /tmp/build-scripts/*.sh
