@@ -26,5 +26,7 @@ apt-get install -y --no-install-recommends gh
 
 sshpass -V
 smbclient --version
-mount.cifs -V
+# mount.cifs calls cap_set_proc() at startup and fails without CAP_SYS_ADMIN,
+# so only assert the binary is present here (build steps lack that cap).
+command -v mount.cifs
 gh --version

@@ -90,7 +90,7 @@ fi
 
 docker exec "${NAME}" sshpass -V >/dev/null
 docker exec "${NAME}" smbclient --version >/dev/null
-docker exec "${NAME}" mount.cifs -V >/dev/null
+docker exec "${NAME}" sh -c 'command -v mount.cifs' >/dev/null
 docker exec "${NAME}" gh --version >/dev/null
 
 # smb-mount must be a no-op when SMB_HOST is unset.
