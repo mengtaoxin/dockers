@@ -1,32 +1,32 @@
-# Image builds: do not work around external failures
+# Image builds: don't paper over external failures
 
 ## Why this exists
 
-Publishing images in this repo goes through GitHub Actions: build on a hosted runner, `apt-get` inside Docker, push to GHCR. That path depends on a lot of infrastructure we do not control—runner networking/DNS, Ubuntu mirrors, Launchpad PPAs, container registries, and Actions itself.
+Images are built in GitHub Actions and depend on infrastructure outside this repo: runner networking/DNS, Ubuntu mirrors, PPAs, the GHCR registry, and Actions itself. Failures there — `Could not resolve 'archive.ubuntu.com'`, `Failed to fetch`, mirror timeouts — can look like an image bug even when the Dockerfile and scripts are unchanged and previously succeeded.
 
-In practice those layers fail in ways that look like “our image is broken”: missing packages, `Could not resolve 'archive.ubuntu.com'`, flaky mirror timeouts. Investigating the `github-actions-runner-a` publish failures showed the pattern clearly: the same Dockerfile and install scripts that had succeeded earlier failed with pure DNS errors inside the build; the stack logic was unchanged. GitHub’s status page can still be green while a given runner’s Docker bridge DNS is unhealthy. Pinning runner images or adding retries did not fix a broken resolver—it only made the failure slower and noisier.
+Such failures are usually **external and temporary**.
 
-So the failure mode is often **external and temporary**, not a design defect in the stack.
+## What the build already does
 
-## Why we refuse workarounds
+Install scripts fail loudly instead of trusting exit codes alone:
 
-It is tempting to “harden” the build: `docker build --network=host`, apt retry/failover ladders, mirror rewriting, alternate DNS, sleeping and looping, or special-casing runner OSes for a one-off outage.
+- `scripts/apt-update.sh` retries `apt-get update` a bounded number of times with backoff and treats `Failed to fetch` / `Could not resolve` output as a hard failure, because apt can exit 0 even when every mirror failed.
+- The Playwright install scripts retry their downloads a bounded number of times.
 
-Those patches:
+These retries smooth over brief mirror flakiness, but after the bounded attempts the build still fails. They are not a reason to keep adding tolerance.
 
-- **Encode someone else’s outage into our tree.** The next reader cannot tell product intent from “survive GitHub DNS that afternoon.”
-- **Add surface area** that must be maintained, tested, and explained, for a problem that usually disappears after a re-run.
-- **Obscure real bugs.** If every network glitch is papered over, a genuine packaging mistake looks the same as a flaky mirror until someone digs through layers of retry logic.
+## What not to add
 
-This repo is a personal collection of Compose stacks, not a platform that must absorb arbitrary upstream downtime. Clarity beats clever resilience here.
+Do not commit structural bypasses that reroute the build around a specific outage:
 
-## What to do instead
+- `docker build --network=host`, alternate DNS, or mirror rewriting
+- Special-casing a runner OS/image for a one-off incident
+- Silent or unbounded retry loops that hide whether the build truly succeeded
 
-1. Keep Dockerfiles and install scripts **straightforward**: update, install, fail if something is wrong.
-2. When CI fails, check whether the error is **ours** (bad package name, broken script) or **external** (resolve/fetch/registry/runner).
-3. For external failures: **wait for the environment to recover**, then re-run the workflow (or push again). Do not land a bypass “just for this run.”
-4. Still fix real bugs in our code when the failure is ours.
+These encode someone else's outage into the tree, add surface area, and make a real packaging bug indistinguishable from flaky infrastructure. A `--network=host` bypass was tried during a DNS incident and reverted for exactly this reason.
 
-## What this is not
+## What to do
 
-This is not a ban on clear errors, version pins that define the image, or intentional product behavior. It is a ban on **defensive complexity whose only job is to paper over transient host/upstream problems**.
+1. When CI fails, decide whether it is **ours** (bad package name or script) or **external** (resolve / fetch / registry / runner).
+2. Fix it normally when it is ours.
+3. For an external failure, re-run the workflow once the environment recovers (or use `workflow_dispatch`). Do not land a bypass "just for this run".
