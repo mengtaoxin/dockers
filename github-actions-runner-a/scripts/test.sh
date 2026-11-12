@@ -107,7 +107,7 @@ fi
 
 # filecopy: help / argument validation, offline (no SMB server required).
 docker exec "${NAME}" filecopy --help 2>&1 | grep -q 'Usage: filecopy'
-docker exec "${NAME}" command -v filecopy-smb >/dev/null
+docker exec "${NAME}" sh -c 'command -v filecopy-smb' >/dev/null
 if docker exec "${NAME}" filecopy >/dev/null 2>&1; then
   echo "filecopy should fail without arguments" >&2
   exit 1
