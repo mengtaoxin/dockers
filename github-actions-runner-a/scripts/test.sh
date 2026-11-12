@@ -26,7 +26,8 @@ for required in \
   scripts/docker-entrypoint.sh \
   scripts/mysql-ensure-ready.sh \
   scripts/install-mysql.sh \
-  scripts/install-deps.sh
+  scripts/install-deps.sh \
+  scripts/smb-mount.sh
 do
   if [[ ! -f "${ROOT}/${required}" ]]; then
     echo "missing ${required}" >&2
@@ -89,7 +90,18 @@ fi
 
 docker exec "${NAME}" sshpass -V >/dev/null
 docker exec "${NAME}" smbclient --version >/dev/null
+docker exec "${NAME}" mount.cifs -V >/dev/null
 docker exec "${NAME}" gh --version >/dev/null
+
+# smb-mount must be a no-op when SMB_HOST is unset.
+docker exec "${NAME}" smb-mount 2>&1 | grep -q 'skipping SMB mount'
+docker exec "${NAME}" test -d /mnt/smb
+
+# smb-mount must fail loudly when SMB_HOST is set but credentials/share are missing.
+if docker exec -e SMB_HOST=127.0.0.1 "${NAME}" smb-mount >/dev/null 2>&1; then
+  echo "smb-mount should fail with incomplete SMB config" >&2
+  exit 1
+fi
 docker exec "${NAME}" mysqld --version >/dev/null
 docker exec -u runner "${NAME}" sudo -n true
 docker exec "${NAME}" \

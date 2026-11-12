@@ -2,7 +2,8 @@
 
 Self-hosted GitHub Actions runner based on [`ghcr.io/actions/actions-runner`](https://github.com/actions/runner/pkgs/container/actions-runner), with extras for CI jobs:
 
-- `sshpass`, `smbclient`, GitHub CLI (`gh`)
+- `sshpass`, `smbclient`, `cifs-utils`, GitHub CLI (`gh`)
+- Optional SMB/CIFS share auto-mounted at `/mnt/smb` on start
 - Process-local MySQL 8 (`mysql-server`) — same first-boot init as [ubuntu-a](../ubuntu-a/)
 - Official `runner` user with passwordless `sudo`
 
@@ -29,6 +30,29 @@ tmpfs:
   - /home/runner/_work:uid=1001,gid=1001,mode=1777,exec,size=8g
 ```
 
+## SMB mount
+
+Set `SMB_HOST` (plus `SMB_USERNAME`, `SMB_PASSWORD`, `SMB_SHARE`) and the share is mounted at `/mnt/smb` during entrypoint, before MySQL and the runner start. When `SMB_HOST` is empty, mounting is skipped entirely. The password is passed through a `0600` credentials file, never on the command line.
+
+Mounting CIFS requires privileges. Run the container with `--privileged`, or the narrower:
+
+```bash
+--cap-add SYS_ADMIN --cap-add DAC_READ_SEARCH --security-opt apparmor:unconfined
+```
+
+In Compose, uncomment the `privileged: true` (or `cap_add` / `security_opt`) block in `compose.yaml`. Override the mount point with `SMB_MOUNT_POINT`.
+
+```bash
+docker run --rm --privileged \
+  -e MYSQL_ROOT_PASSWORD=secret \
+  -e SMB_HOST=nas.example.com \
+  -e SMB_USERNAME=ci \
+  -e SMB_PASSWORD=secret \
+  -e SMB_SHARE=build-cache \
+  ghcr.io/<owner>/github-actions-runner-a:0.2.0 \
+  ls /mnt/smb
+```
+
 ## Environment variables
 
 | Variable | Required | Description |
@@ -43,6 +67,11 @@ tmpfs:
 | `RUNNER_LABELS` | no | Extra labels (default: runner defaults) |
 | `RUNNER_GROUP` | no | Runner group (default: `Default`) |
 | `RUNNER_WORKDIR` | no | Work directory relative to `/home/runner` (default: `_work`) |
+| `SMB_HOST` | no | SMB server host/IP. When set, the share is mounted on start |
+| `SMB_USERNAME` | conditional | SMB username (required when `SMB_HOST` is set) |
+| `SMB_PASSWORD` | conditional | SMB password (required when `SMB_HOST` is set) |
+| `SMB_SHARE` | conditional | Share name (required when `SMB_HOST` is set) |
+| `SMB_MOUNT_POINT` | no | Mount point (default `/mnt/smb`) |
 
 ```bash
 cd github-actions-runner-a

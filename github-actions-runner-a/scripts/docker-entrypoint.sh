@@ -14,6 +14,10 @@
 #   RUNNER_WORKDIR (default: _work → /home/runner/_work)
 set -euo pipefail
 
+# Optional SMB/CIFS mount (no-op unless SMB_HOST is set). Must run before
+# MySQL/runner so jobs see the share; requires mount privileges (see README).
+smb-mount
+
 mysql-ensure-ready
 
 if [[ $# -gt 0 ]]; then

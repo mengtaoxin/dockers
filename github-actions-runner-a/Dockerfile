@@ -30,8 +30,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 COPY github-actions-runner-a/scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY github-actions-runner-a/scripts/mysql-ensure-ready.sh /usr/local/bin/mysql-ensure-ready
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/mysql-ensure-ready \
-    && ln -sf /usr/local/bin/mysql-ensure-ready /usr/local/bin/mysql-ensure-ready.sh
+COPY github-actions-runner-a/scripts/smb-mount.sh /usr/local/bin/smb-mount
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/mysql-ensure-ready /usr/local/bin/smb-mount \
+    && ln -sf /usr/local/bin/mysql-ensure-ready /usr/local/bin/mysql-ensure-ready.sh \
+    && ln -sf /usr/local/bin/smb-mount /usr/local/bin/smb-mount.sh \
+    && mkdir -p /mnt/smb \
+    && chown runner:runner /mnt/smb
 
 EXPOSE 3306
 

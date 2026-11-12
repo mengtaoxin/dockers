@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Install runner extras: sshpass, smbclient, GitHub CLI (gh).
+# Install runner extras: sshpass, smbclient, cifs-utils (SMB mount), GitHub CLI (gh).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 bash "${SCRIPT_DIR}/apt-update.sh"
 apt-get install -y --no-install-recommends \
   ca-certificates \
+  cifs-utils \
   curl \
   gnupg \
   smbclient \
@@ -25,4 +26,5 @@ apt-get install -y --no-install-recommends gh
 
 sshpass -V
 smbclient --version
+mount.cifs -V
 gh --version
