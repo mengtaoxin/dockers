@@ -1,6 +1,6 @@
 services:
   github-actions-runner-a:
-    image: ghcr.io/${GITHUB_OWNER:-local}/github-actions-runner-a:${VERSION:-0.2.0}
+    image: ghcr.io/${GITHUB_OWNER:-local}/github-actions-runner-a:${VERSION:-0.3.0}
     build:
       context: ..
       dockerfile: github-actions-runner-a/Dockerfile
@@ -15,6 +15,8 @@ services:
       RUNNER_NAME: ${RUNNER_NAME:-}
       RUNNER_LABELS: ${RUNNER_LABELS:-}
       RUNNER_GROUP: ${RUNNER_GROUP:-Default}
+      # Protocol used by the `filecopy` command (default smb).
+      FILE_COPY_TYPE: ${FILE_COPY_TYPE:-smb}
       # Optional SMB/CIFS share, auto-mounted at /mnt/smb on start.
       SMB_HOST: ${SMB_HOST:-}
       SMB_USERNAME: ${SMB_USERNAME:-}

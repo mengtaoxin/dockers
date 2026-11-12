@@ -27,7 +27,9 @@ for required in \
   scripts/mysql-ensure-ready.sh \
   scripts/install-mysql.sh \
   scripts/install-deps.sh \
-  scripts/smb-mount.sh
+  scripts/smb-mount.sh \
+  scripts/filecopy.sh \
+  scripts/filecopy-smb.sh
 do
   if [[ ! -f "${ROOT}/${required}" ]]; then
     echo "missing ${required}" >&2
@@ -102,6 +104,27 @@ if docker exec -e SMB_HOST=127.0.0.1 "${NAME}" smb-mount >/dev/null 2>&1; then
   echo "smb-mount should fail with incomplete SMB config" >&2
   exit 1
 fi
+
+# filecopy: help / argument validation, offline (no SMB server required).
+docker exec "${NAME}" filecopy --help 2>&1 | grep -q 'Usage: filecopy'
+docker exec "${NAME}" command -v filecopy-smb >/dev/null
+if docker exec "${NAME}" filecopy >/dev/null 2>&1; then
+  echo "filecopy should fail without arguments" >&2
+  exit 1
+fi
+if docker exec "${NAME}" filecopy /no/such/file y.zip >/dev/null 2>&1; then
+  echo "filecopy should fail when the local file is missing" >&2
+  exit 1
+fi
+if docker exec -e FILE_COPY_TYPE=ftp "${NAME}" filecopy /etc/hostname y.zip >/dev/null 2>&1; then
+  echo "filecopy should fail for an unsupported FILE_COPY_TYPE" >&2
+  exit 1
+fi
+if docker exec "${NAME}" filecopy /etc/hostname y.zip >/dev/null 2>&1; then
+  echo "filecopy-smb should fail when SMB_* config is missing" >&2
+  exit 1
+fi
+
 docker exec "${NAME}" mysqld --version >/dev/null
 docker exec -u runner "${NAME}" sudo -n true
 docker exec "${NAME}" \

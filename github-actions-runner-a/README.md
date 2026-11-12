@@ -4,6 +4,7 @@ Self-hosted GitHub Actions runner based on [`ghcr.io/actions/actions-runner`](ht
 
 - `sshpass`, `smbclient`, `cifs-utils`, GitHub CLI (`gh`)
 - Optional SMB/CIFS share auto-mounted at `/mnt/smb` on start
+- `filecopy` command — upload a file to a file server (SMB), refuses to overwrite
 - Process-local MySQL 8 (`mysql-server`) — same first-boot init as [ubuntu-a](../ubuntu-a/)
 - Official `runner` user with passwordless `sudo`
 
@@ -49,8 +50,32 @@ docker run --rm --privileged \
   -e SMB_USERNAME=ci \
   -e SMB_PASSWORD=secret \
   -e SMB_SHARE=build-cache \
-  ghcr.io/<owner>/github-actions-runner-a:0.2.0 \
+  ghcr.io/<owner>/github-actions-runner-a:0.3.0 \
   ls /mnt/smb
+```
+
+## File copy (`filecopy`)
+
+`filecopy` uploads a local file to a file server. It is a standalone command you run in a workflow step or a one-shot container; it does **not** need the auto-mount or mount privileges — it talks SMB in userspace via `smbclient`.
+
+```bash
+filecopy <local-file> <remote-path>
+```
+
+- `<remote-path>` is relative to the share root; a leading `/` is accepted and ignored — e.g. `filecopy /tmp/out.zip /home/xxx/y.zip`.
+- **Never overwrites**: if the destination already exists, the command fails. Missing parent directories are created automatically.
+- Protocol is chosen with `FILE_COPY_TYPE` (default `smb`). New protocols are added as `filecopy-<type>` backends; only `smb` ships today. It reuses the same `SMB_HOST` / `SMB_USERNAME` / `SMB_PASSWORD` / `SMB_SHARE` variables as the mount.
+
+```bash
+docker run --rm \
+  -e FILE_COPY_TYPE=smb \
+  -e SMB_HOST=nas.example.com \
+  -e SMB_USERNAME=ci \
+  -e SMB_PASSWORD=secret \
+  -e SMB_SHARE=artifacts \
+  -v "$PWD/out.zip":/tmp/out.zip:ro \
+  ghcr.io/<owner>/github-actions-runner-a:0.3.0 \
+  filecopy /tmp/out.zip /home/xxx/y.zip
 ```
 
 ## Environment variables
@@ -72,6 +97,7 @@ docker run --rm --privileged \
 | `SMB_PASSWORD` | conditional | SMB password (required when `SMB_HOST` is set) |
 | `SMB_SHARE` | conditional | Share name (required when `SMB_HOST` is set) |
 | `SMB_MOUNT_POINT` | no | Mount point (default `/mnt/smb`) |
+| `FILE_COPY_TYPE` | no | Protocol used by `filecopy` (default `smb`) |
 
 ```bash
 cd github-actions-runner-a
@@ -88,7 +114,7 @@ One-shot MySQL + command (no runner registration):
 docker run --rm \
   -e MYSQL_ROOT_PASSWORD=secret \
   -e MYSQL_SCHEMA_NAME=app \
-  ghcr.io/<owner>/github-actions-runner-a:0.2.0 \
+  ghcr.io/<owner>/github-actions-runner-a:0.3.0 \
   gh --version
 ```
 
