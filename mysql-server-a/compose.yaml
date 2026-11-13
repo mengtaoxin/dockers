@@ -1,15 +1,19 @@
 services:
   mysql:
     image: mysql:8.0
+    entrypoint: ["/mysqld-entrypoint.sh"]
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
       TZ: ${TZ:-UTC}
+      # Auth plugin switch (not the root password). Default off = MySQL 8 caching_sha2_password.
+      MYSQL_NATIVE_PASSWORD: ${MYSQL_NATIVE_PASSWORD:-0}
     ports:
       - "${MYSQL_HOST_PORT:-3306}:3306"
     volumes:
       - ./data:/var/lib/mysql
       - ./logs:/logs
       - ./mysql/conf.d:/etc/mysql/conf.d:ro
+      - ./scripts/mysqld-entrypoint.sh:/mysqld-entrypoint.sh:ro
     healthcheck:
       test:
         [
@@ -36,7 +40,7 @@ services:
     restart: unless-stopped
 
   backup-tool:
-    image: ghcr.io/${GITHUB_OWNER:-local}/mysql-server-a:${VERSION:-0.1.0}
+    image: ghcr.io/${GITHUB_OWNER:-local}/mysql-server-a:${VERSION:-0.2.0}
     build:
       context: ..
       dockerfile: mysql-server-a/Dockerfile
@@ -48,7 +52,7 @@ services:
       BACKUP_DIR: /backup
       BACKUP_INTERVAL_MINUTES: ${BACKUP_INTERVAL_MINUTES:-60}
       BACKUP_KEEP_COUNT: ${BACKUP_KEEP_COUNT:-100}
-      BACKUP_TOOL_VERSION: ${VERSION:-0.1.0}
+      BACKUP_TOOL_VERSION: ${VERSION:-0.2.0}
       TZ: ${TZ:-UTC}
     volumes:
       - ./backup:/backup
