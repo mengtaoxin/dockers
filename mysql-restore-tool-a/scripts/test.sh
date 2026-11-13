@@ -7,12 +7,14 @@ IMAGE="dockers-test/mysql-restore-tool-a:test"
 BACKUP_HOST_DIR="$(mktemp -d)"
 
 cleanup() {
-  # restore writes mysql-owned files into the bind mount; host rm can fail on GHA.
+  # restore writes mysql-owned files into the bind mount; sticky /tmp blocks host rm.
   if [[ -d "${BACKUP_HOST_DIR}" ]]; then
+    host_uid="$(id -u)"
+    host_gid="$(id -g)"
     docker run --rm -v "${BACKUP_HOST_DIR}:/v" --entrypoint bash mysql:8.0 -lc \
-      'rm -rf /v/* /v/.[!.]* /v/..?*' >/dev/null 2>&1 || true
+      "find /v -mindepth 1 -delete; chown ${host_uid}:${host_gid} /v" >/dev/null 2>&1 || true
   fi
-  rm -rf "${BACKUP_HOST_DIR}"
+  rm -rf "${BACKUP_HOST_DIR}" || true
 }
 trap cleanup EXIT
 

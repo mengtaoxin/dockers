@@ -40,7 +40,7 @@ services:
     restart: unless-stopped
 
   backup-tool:
-    image: ghcr.io/${GITHUB_OWNER:-local}/mysql-server-a:${VERSION:-0.2.1}
+    image: ghcr.io/${GITHUB_OWNER:-local}/mysql-server-a:${VERSION:-0.2.2}
     build:
       context: ..
       dockerfile: mysql-server-a/Dockerfile
@@ -52,7 +52,7 @@ services:
       BACKUP_DIR: /backup
       BACKUP_INTERVAL_MINUTES: ${BACKUP_INTERVAL_MINUTES:-60}
       BACKUP_KEEP_COUNT: ${BACKUP_KEEP_COUNT:-100}
-      BACKUP_TOOL_VERSION: ${VERSION:-0.2.1}
+      BACKUP_TOOL_VERSION: ${VERSION:-0.2.2}
       TZ: ${TZ:-UTC}
     volumes:
       - ./backup:/backup
