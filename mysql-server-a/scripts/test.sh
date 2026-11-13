@@ -4,21 +4,19 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_ROOT="$(cd "${ROOT}/.." && pwd)"
 IMAGE="dockers-test/mysql-server-a:test"
-NAME="mysql-server-a-prune-test-$$"
-MYSQL_NAME="mysql-server-a-mysqld-test-$$"
+NAME="mysql-server-a-test-$$"
 BACKUP_HOST_DIR="$(mktemp -d)"
 MYSQL_DATA_DIR="$(mktemp -d)"
 MYSQL_LOGS_DIR="$(mktemp -d)"
+HOST_PMA_PORT=""
 
 cleanup() {
   docker rm -f "${NAME}" >/dev/null 2>&1 || true
-  docker rm -f "${MYSQL_NAME}" >/dev/null 2>&1 || true
-  # Official entrypoint chowns /var/lib/mysql; sticky /tmp then blocks host rm of the dir.
   host_uid="$(id -u)"
   host_gid="$(id -g)"
-  for d in "${MYSQL_DATA_DIR}" "${MYSQL_LOGS_DIR}"; do
+  for d in "${MYSQL_DATA_DIR}" "${MYSQL_LOGS_DIR}" "${BACKUP_HOST_DIR}"; do
     if [[ -d "${d}" ]]; then
-      docker run --rm -v "${d}:/v" --entrypoint bash mysql:8.0 -lc \
+      docker run --rm -v "${d}:/v" --entrypoint bash "${IMAGE}" -lc \
         "find /v -mindepth 1 -delete; chown ${host_uid}:${host_gid} /v" >/dev/null 2>&1 || true
     fi
   done
@@ -36,10 +34,14 @@ for required in \
   Dockerfile \
   compose.yaml \
   README.md \
-  mysql/conf.d/logging.cnf \
+  mysql/conf.d/zz-logging.cnf \
+  apache/phpmyadmin.conf \
   scripts/backup-loop.sh \
   scripts/prune-backups.sh \
-  scripts/mysqld-entrypoint.sh
+  scripts/docker-entrypoint.sh \
+  scripts/mysql-ensure-ready.sh \
+  scripts/install-mysql.sh \
+  scripts/install-phpmyadmin.sh
 do
   if [[ ! -f "${ROOT}/${required}" ]]; then
     echo "missing ${required}" >&2
@@ -47,10 +49,6 @@ do
   fi
 done
 
-if ! grep -q 'mysqld-entrypoint.sh' "${ROOT}/compose.yaml"; then
-  echo "compose.yaml must wire mysqld-entrypoint.sh" >&2
-  exit 1
-fi
 if ! grep -q 'MYSQL_NATIVE_PASSWORD' "${ROOT}/compose.yaml"; then
   echo "compose.yaml must expose MYSQL_NATIVE_PASSWORD" >&2
   exit 1
@@ -63,14 +61,17 @@ if ! grep -q 'utf8mb4' "${ROOT}/README.md"; then
   echo "README.md must mention utf8mb4" >&2
   exit 1
 fi
+if grep -qE '^\s+phpmyadmin:|^\s+backup-tool:' "${ROOT}/compose.yaml"; then
+  echo "compose.yaml must be a single-service all-in-one stack" >&2
+  exit 1
+fi
 
 docker build -f "${ROOT}/Dockerfile" -t "${IMAGE}" "${REPO_ROOT}"
 
 docker run --rm --entrypoint bash "${IMAGE}" -lc \
-  'command -v mysqldump && command -v zip && command -v mysqladmin && test -x /usr/local/bin/backup-loop.sh && test -x /usr/local/bin/prune-backups.sh'
+  'command -v mysqld && command -v mysqldump && command -v zip && command -v mysqladmin && command -v apache2ctl && test -d /var/www/phpmyadmin && test -x /usr/local/bin/backup-loop.sh && test -x /usr/local/bin/prune-backups.sh && test -x /usr/local/bin/mysql-ensure-ready'
 
 # Seed backups spanning recent / mid / older windows and verify prune.
-# Use fixed timestamps relative to "now" inside the container TZ=UTC.
 now_day="$(date -u +%Y%m%d)"
 day0="${now_day}"
 day1="$(date -u -d "${now_day} -1 day" +%Y%m%d 2>/dev/null || date -u -j -v-1d -f "%Y%m%d" "${now_day}" +%Y%m%d)"
@@ -107,7 +108,6 @@ if [[ "${remaining}" -lt 1 ]]; then
   exit 1
 fi
 
-# Older day should keep only the newest file for that day when older_per_day=1.
 older_count="$(find "${BACKUP_HOST_DIR}" -name "mysql-backup-${day10}-*.zip" | wc -l | tr -d ' ')"
 if [[ "${older_count}" -gt 1 ]]; then
   echo "expected at most 1 backup for older day ${day10}, got ${older_count}" >&2
@@ -115,21 +115,27 @@ if [[ "${older_count}" -gt 1 ]]; then
   exit 1
 fi
 
-# --- mysqld entrypoint acceptance (native password + TZ + utf8mb4) ---
-docker run -d --name "${MYSQL_NAME}" \
+# Fresh backup dir for the live container run.
+rm -f "${BACKUP_HOST_DIR}"/mysql-backup-*.zip
+
+# Pick a free host port for phpMyAdmin.
+HOST_PMA_PORT="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')"
+
+docker run -d --name "${NAME}" \
   -e MYSQL_ROOT_PASSWORD=testpass \
   -e TZ=Asia/Shanghai \
   -e MYSQL_NATIVE_PASSWORD=1 \
+  -e BACKUP_INTERVAL_MINUTES=60 \
+  -e BACKUP_KEEP_COUNT=100 \
+  -p "127.0.0.1:${HOST_PMA_PORT}:80" \
   -v "${MYSQL_DATA_DIR}:/var/lib/mysql" \
   -v "${MYSQL_LOGS_DIR}:/logs" \
-  -v "${ROOT}/mysql/conf.d:/etc/mysql/conf.d:ro" \
-  -v "${ROOT}/scripts/mysqld-entrypoint.sh:/mysqld-entrypoint.sh:ro" \
-  --entrypoint /mysqld-entrypoint.sh \
-  mysql:8.0
+  -v "${BACKUP_HOST_DIR}:/backup" \
+  "${IMAGE}"
 
 ready=0
-for _ in $(seq 1 60); do
-  if docker exec "${MYSQL_NAME}" mysqladmin ping -h127.0.0.1 -uroot -ptestpass --silent >/dev/null 2>&1; then
+for _ in $(seq 1 90); do
+  if docker exec "${NAME}" mysqladmin --socket=/var/run/mysqld/mysqld.sock -uroot -ptestpass ping --silent >/dev/null 2>&1; then
     ready=1
     break
   fi
@@ -137,13 +143,12 @@ for _ in $(seq 1 60); do
 done
 if [[ "${ready}" -ne 1 ]]; then
   echo "mysqld did not become ready" >&2
-  docker logs "${MYSQL_NAME}" >&2 || true
+  docker logs "${NAME}" >&2 || true
   exit 1
 fi
 
-vars="$(docker exec "${MYSQL_NAME}" mysql -N -uroot -ptestpass -e \
+vars="$(docker exec "${NAME}" mysql --socket=/var/run/mysqld/mysqld.sock -N -uroot -ptestpass -e \
   "SELECT @@global.time_zone, @@character_set_server, @@collation_server, @@global.default_authentication_plugin;")"
-# Expect: +08:00 utf8mb4 utf8mb4_unicode_ci mysql_native_password
 read -r got_tz got_charset got_collation got_plugin <<<"${vars}"
 if [[ "${got_tz}" != "+08:00" ]]; then
   echo "expected @@global.time_zone=+08:00, got ${got_tz}" >&2
@@ -159,6 +164,27 @@ if [[ "${got_collation}" != "utf8mb4_unicode_ci" ]]; then
 fi
 if [[ "${got_plugin}" != "mysql_native_password" ]]; then
   echo "expected default_authentication_plugin=mysql_native_password, got ${got_plugin}" >&2
+  exit 1
+fi
+
+pma_ok=0
+for _ in $(seq 1 30); do
+  code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${HOST_PMA_PORT}/" || true)"
+  if [[ "${code}" == "200" || "${code}" == "302" || "${code}" == "401" ]]; then
+    pma_ok=1
+    break
+  fi
+  sleep 2
+done
+if [[ "${pma_ok}" -ne 1 ]]; then
+  echo "phpMyAdmin HTTP did not become ready (last code=${code:-none})" >&2
+  docker logs "${NAME}" >&2 || true
+  exit 1
+fi
+
+if ! docker exec "${NAME}" bash -lc 'ps aux | grep -v grep | grep -q backup-loop.sh'; then
+  echo "backup-loop is not running" >&2
+  docker logs "${NAME}" >&2 || true
   exit 1
 fi
 

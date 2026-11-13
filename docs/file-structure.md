@@ -27,7 +27,7 @@ A directory counts as a stack when it contains both a `Dockerfile` and a `VERSIO
 | `ubuntu-a/` | Ubuntu 24.04 | Node.js 24 + process-local MySQL 8 |
 | `ubuntu-b/` | Ubuntu 24.04 | Node.js 24 + preinstalled Playwright browsers |
 | `github-actions-runner-a/` | official actions-runner | Ephemeral Actions runner + MySQL / filecopy (SMB) |
-| `mysql-server-a/` | `mysql:8.0` (backup-tool) | MySQL 8 + phpMyAdmin compose; scheduled mysqldump backups |
+| `mysql-server-a/` | Ubuntu 24.04 | All-in-one MySQL 8 + phpMyAdmin + scheduled mysqldump backups |
 | `mysql-restore-tool-a/` | `mysql:8.0` | One-shot: backup zip → mountable MySQL datadir |
 
 ## Build context

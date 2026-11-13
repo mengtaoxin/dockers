@@ -1,62 +1,36 @@
 services:
-  mysql:
-    image: mysql:8.0
-    entrypoint: ["/mysqld-entrypoint.sh"]
+  mysql-server-a:
+    image: ghcr.io/${GITHUB_OWNER:-local}/mysql-server-a:${VERSION:-0.3.0}
+    build:
+      context: ..
+      dockerfile: mysql-server-a/Dockerfile
+      args:
+        STACK_VERSION: ${VERSION:-0.3.0}
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
-      TZ: ${TZ:-UTC}
-      # Auth plugin switch (not the root password). Default off = MySQL 8 caching_sha2_password.
+      MYSQL_BIND_ADDRESS: ${MYSQL_BIND_ADDRESS:-0.0.0.0}
+      # Auth plugin switch (not the root password). Default off = caching_sha2_password.
       MYSQL_NATIVE_PASSWORD: ${MYSQL_NATIVE_PASSWORD:-0}
+      TZ: ${TZ:-UTC}
+      BACKUP_DIR: /backup
+      BACKUP_INTERVAL_MINUTES: ${BACKUP_INTERVAL_MINUTES:-60}
+      BACKUP_KEEP_COUNT: ${BACKUP_KEEP_COUNT:-100}
+      BACKUP_TOOL_VERSION: ${VERSION:-0.3.0}
     ports:
       - "${MYSQL_HOST_PORT:-3306}:3306"
+      - "${PHPMYADMIN_HOST_PORT:-8080}:80"
     volumes:
       - ./data:/var/lib/mysql
       - ./logs:/logs
-      - ./mysql/conf.d:/etc/mysql/conf.d:ro
-      - ./scripts/mysqld-entrypoint.sh:/mysqld-entrypoint.sh:ro
+      - ./backup:/backup
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "mysqladmin ping -h127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent",
+          "mysqladmin --socket=/var/run/mysqld/mysqld.sock --user=root --password=$$MYSQL_ROOT_PASSWORD ping --silent",
         ]
       interval: 5s
       timeout: 5s
       retries: 12
-      start_period: 30s
-    restart: unless-stopped
-
-  phpmyadmin:
-    image: phpmyadmin:5.2.3
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      UPLOAD_LIMIT: 64M
-    ports:
-      - "${PHPMYADMIN_HOST_PORT:-8080}:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    restart: unless-stopped
-
-  backup-tool:
-    image: ghcr.io/${GITHUB_OWNER:-local}/mysql-server-a:${VERSION:-0.2.2}
-    build:
-      context: ..
-      dockerfile: mysql-server-a/Dockerfile
-    environment:
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
-      MYSQL_USER: root
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
-      BACKUP_DIR: /backup
-      BACKUP_INTERVAL_MINUTES: ${BACKUP_INTERVAL_MINUTES:-60}
-      BACKUP_KEEP_COUNT: ${BACKUP_KEEP_COUNT:-100}
-      BACKUP_TOOL_VERSION: ${VERSION:-0.2.2}
-      TZ: ${TZ:-UTC}
-    volumes:
-      - ./backup:/backup
-    depends_on:
-      mysql:
-        condition: service_healthy
+      start_period: 40s
     restart: unless-stopped
