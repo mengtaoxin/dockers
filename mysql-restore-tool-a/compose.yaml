@@ -2,7 +2,7 @@
 #   VERSION=$(tr -d '[:space:]' < VERSION) docker compose run --rm restore --file mysql-backup-YYYYMMdd-HHmmss.zip
 services:
   restore:
-    image: ghcr.io/${GITHUB_OWNER:-local}/mysql-restore-tool-a:${VERSION:-0.1.0}
+    image: ghcr.io/${GITHUB_OWNER:-local}/mysql-restore-tool-a:${VERSION:-0.1.1}
     build:
       context: ..
       dockerfile: mysql-restore-tool-a/Dockerfile

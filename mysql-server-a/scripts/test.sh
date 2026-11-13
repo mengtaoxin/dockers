@@ -13,6 +13,12 @@ MYSQL_LOGS_DIR="$(mktemp -d)"
 cleanup() {
   docker rm -f "${NAME}" >/dev/null 2>&1 || true
   docker rm -f "${MYSQL_NAME}" >/dev/null 2>&1 || true
+  # mysqld may leave mysql-owned files in bind mounts; host rm can fail on GHA.
+  for d in "${MYSQL_DATA_DIR}" "${MYSQL_LOGS_DIR}"; do
+    if [[ -d "${d}" ]]; then
+      docker run --rm -v "${d}:/v" --entrypoint bash mysql:8.0 -lc 'rm -rf /v/* /v/.[!.]* /v/..?*' >/dev/null 2>&1 || true
+    fi
+  done
   rm -rf "${BACKUP_HOST_DIR}" "${MYSQL_DATA_DIR}" "${MYSQL_LOGS_DIR}"
 }
 trap cleanup EXIT

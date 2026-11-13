@@ -7,6 +7,11 @@ IMAGE="dockers-test/mysql-restore-tool-a:test"
 BACKUP_HOST_DIR="$(mktemp -d)"
 
 cleanup() {
+  # restore writes mysql-owned files into the bind mount; host rm can fail on GHA.
+  if [[ -d "${BACKUP_HOST_DIR}" ]]; then
+    docker run --rm -v "${BACKUP_HOST_DIR}:/v" --entrypoint bash mysql:8.0 -lc \
+      'rm -rf /v/* /v/.[!.]* /v/..?*' >/dev/null 2>&1 || true
+  fi
   rm -rf "${BACKUP_HOST_DIR}"
 }
 trap cleanup EXIT

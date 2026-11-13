@@ -41,4 +41,9 @@ else
   :
 fi
 
+# logging.cnf → /logs/error.log. Bind mounts are often host-UID-owned; mysqld runs as mysql.
+if [[ -d /logs ]]; then
+  chown mysql:mysql /logs || chmod 0777 /logs
+fi
+
 exec /usr/local/bin/docker-entrypoint.sh "$@"
