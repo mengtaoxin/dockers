@@ -26,7 +26,7 @@ A directory counts as a stack when it contains both a `Dockerfile` and a `VERSIO
 | `hello-world/` | Alpine | Minimal image that exercises the pipeline |
 | `ubuntu-a/` | Ubuntu 24.04 | Node.js 24 + process-local MySQL 8 |
 | `ubuntu-b/` | Ubuntu 24.04 | Node.js 24 + preinstalled Playwright browsers |
-| `github-actions-runner-a/` | official actions-runner | Ephemeral Actions runner + MySQL / SMB mount |
+| `github-actions-runner-a/` | official actions-runner | Ephemeral Actions runner + MySQL / filecopy (SMB) |
 
 ## Build context
 

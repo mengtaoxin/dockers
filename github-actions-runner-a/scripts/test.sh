@@ -27,7 +27,6 @@ for required in \
   scripts/mysql-ensure-ready.sh \
   scripts/install-mysql.sh \
   scripts/install-deps.sh \
-  scripts/smb-mount.sh \
   scripts/filecopy.sh \
   scripts/filecopy-smb.sh
 do
@@ -36,6 +35,11 @@ do
     exit 1
   fi
 done
+
+if [[ -f "${ROOT}/scripts/smb-mount.sh" ]]; then
+  echo "smb-mount.sh must be removed (filecopy-only; no CIFS mount)" >&2
+  exit 1
+fi
 
 entrypoint="${ROOT}/scripts/docker-entrypoint.sh"
 grep -q -- '--ephemeral' "${entrypoint}" || {
@@ -50,6 +54,10 @@ grep -q 'Configuring ephemeral runner' "${entrypoint}" || {
   echo "entrypoint missing always-register ephemeral configure path" >&2
   exit 1
 }
+if grep -qE 'smb-mount' "${entrypoint}"; then
+  echo "entrypoint must not call smb-mount" >&2
+  exit 1
+fi
 # Exactly one .runner existence gate is OK (remove_runner); a second would reintroduce skip-on-reuse.
 runner_gate_count="$(grep -cE 'if \[\[ ! -f "\$\{RUNNER_HOME\}/\.runner" \]\]' "${entrypoint}" || true)"
 if [[ "${runner_gate_count}" -ne 1 ]]; then
@@ -92,16 +100,13 @@ fi
 
 docker exec "${NAME}" sshpass -V >/dev/null
 docker exec "${NAME}" smbclient --version >/dev/null
-docker exec "${NAME}" sh -c 'command -v mount.cifs' >/dev/null
 docker exec "${NAME}" gh --version >/dev/null
-
-# smb-mount must be a no-op when SMB_HOST is unset.
-docker exec "${NAME}" smb-mount 2>&1 | grep -q 'skipping SMB mount'
-docker exec "${NAME}" test -d /mnt/smb
-
-# smb-mount must fail loudly when SMB_HOST is set but credentials/share are missing.
-if docker exec -e SMB_HOST=127.0.0.1 "${NAME}" smb-mount >/dev/null 2>&1; then
-  echo "smb-mount should fail with incomplete SMB config" >&2
+if docker exec "${NAME}" sh -c 'command -v mount.cifs' >/dev/null 2>&1; then
+  echo "mount.cifs must not be installed (filecopy-only; no CIFS mount)" >&2
+  exit 1
+fi
+if docker exec "${NAME}" sh -c 'command -v smb-mount' >/dev/null 2>&1; then
+  echo "smb-mount must not be installed" >&2
   exit 1
 fi
 
@@ -139,6 +144,19 @@ out="$(docker run --rm \
   "${IMAGE}" \
   bash -lc 'printf tools-ok')"
 [[ "${out}" == *tools-ok* ]]
+
+# SMB_* alone must not require privileged mount: entrypoint still runs the command.
+out="$(docker run --rm \
+  -e MYSQL_ROOT_PASSWORD="${PASS}" \
+  -e MYSQL_SCHEMA_NAME="${SCHEMA}" \
+  -e FILE_COPY_TYPE=smb \
+  -e SMB_HOST=127.0.0.1 \
+  -e SMB_USERNAME=ci \
+  -e SMB_PASSWORD=secret \
+  -e SMB_SHARE=artifacts \
+  "${IMAGE}" \
+  bash -lc 'printf smb-env-ok')"
+[[ "${out}" == *smb-env-ok* ]]
 
 # MYSQL_TEST_MODE=1 should apply speed-oriented mysqld settings.
 docker run -d --name "${NAME_TEST}" \

@@ -2,8 +2,8 @@
 # SMB backend for filecopy: upload one file to an SMB/CIFS share with smbclient.
 #
 # Never overwrites: the destination is probed first and the upload aborts when
-# it already exists. Missing parent directories are created. Unlike smb-mount,
-# this needs no mount privileges (smbclient is userspace).
+# it already exists. Missing parent directories are created. Userspace only
+# (smbclient); no CIFS mount or privileged capabilities required.
 #
 # Env:
 #   SMB_HOST       server host/IP (required)

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Self-hosted GitHub Actions runner based on the official image, plus
-# sshpass / smbclient / MySQL 8 / GitHub CLI for CI jobs that need them.
+# sshpass / smbclient (filecopy) / MySQL 8 / GitHub CLI for CI jobs that need them.
 # Build from repo root: docker build -f github-actions-runner-a/Dockerfile .
 
 ARG RUNNER_VERSION=2.338.2
@@ -30,16 +30,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 COPY github-actions-runner-a/scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY github-actions-runner-a/scripts/mysql-ensure-ready.sh /usr/local/bin/mysql-ensure-ready
-COPY github-actions-runner-a/scripts/smb-mount.sh /usr/local/bin/smb-mount
 COPY github-actions-runner-a/scripts/filecopy.sh /usr/local/bin/filecopy
 COPY github-actions-runner-a/scripts/filecopy-smb.sh /usr/local/bin/filecopy-smb
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/mysql-ensure-ready /usr/local/bin/smb-mount /usr/local/bin/filecopy /usr/local/bin/filecopy-smb \
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/mysql-ensure-ready /usr/local/bin/filecopy /usr/local/bin/filecopy-smb \
     && ln -sf /usr/local/bin/mysql-ensure-ready /usr/local/bin/mysql-ensure-ready.sh \
-    && ln -sf /usr/local/bin/smb-mount /usr/local/bin/smb-mount.sh \
     && ln -sf /usr/local/bin/filecopy /usr/local/bin/filecopy.sh \
-    && ln -sf /usr/local/bin/filecopy-smb /usr/local/bin/filecopy-smb.sh \
-    && mkdir -p /mnt/smb \
-    && chown runner:runner /mnt/smb
+    && ln -sf /usr/local/bin/filecopy-smb /usr/local/bin/filecopy-smb.sh
 
 EXPOSE 3306
 

@@ -2,8 +2,7 @@
 
 Self-hosted GitHub Actions runner based on [`ghcr.io/actions/actions-runner`](https://github.com/actions/runner/pkgs/container/actions-runner), with extras for CI jobs:
 
-- `sshpass`, `smbclient`, `cifs-utils`, GitHub CLI (`gh`)
-- Optional SMB/CIFS share auto-mounted at `/mnt/smb` on start
+- `sshpass`, `smbclient`, GitHub CLI (`gh`)
 - `filecopy` command — upload a file to a file server (SMB), refuses to overwrite
 - Process-local MySQL 8 (`mysql-server`) — same first-boot init as [ubuntu-a](../ubuntu-a/)
 - Official `runner` user with passwordless `sudo`
@@ -31,32 +30,9 @@ tmpfs:
   - /home/runner/_work:uid=1001,gid=1001,mode=1777,exec,size=8g
 ```
 
-## SMB mount
-
-Set `SMB_HOST` (plus `SMB_USERNAME`, `SMB_PASSWORD`, `SMB_SHARE`) and the share is mounted at `/mnt/smb` during entrypoint, before MySQL and the runner start. When `SMB_HOST` is empty, mounting is skipped entirely. The password is passed through a `0600` credentials file, never on the command line.
-
-Mounting CIFS requires privileges. Run the container with `--privileged`, or the narrower:
-
-```bash
---cap-add SYS_ADMIN --cap-add DAC_READ_SEARCH --security-opt apparmor:unconfined
-```
-
-In Compose, uncomment the `privileged: true` (or `cap_add` / `security_opt`) block in `compose.yaml`. Override the mount point with `SMB_MOUNT_POINT`.
-
-```bash
-docker run --rm --privileged \
-  -e MYSQL_ROOT_PASSWORD=secret \
-  -e SMB_HOST=nas.example.com \
-  -e SMB_USERNAME=ci \
-  -e SMB_PASSWORD=secret \
-  -e SMB_SHARE=build-cache \
-  ghcr.io/<owner>/github-actions-runner-a:0.3.0 \
-  ls /mnt/smb
-```
-
 ## File copy (`filecopy`)
 
-`filecopy` uploads a local file to a file server. It is a standalone command you run in a workflow step or a one-shot container; it does **not** need the auto-mount or mount privileges — it talks SMB in userspace via `smbclient`.
+`filecopy` is the **only** supported way to push files to a file server from this image. It talks SMB in userspace via `smbclient` — no CIFS mount, and **no** `privileged` / `cap_add` required. Set `SMB_*` for connection info; those variables never trigger a share mount into the container.
 
 ```bash
 filecopy <local-file> <remote-path>
@@ -64,7 +40,7 @@ filecopy <local-file> <remote-path>
 
 - `<remote-path>` is relative to the share root; a leading `/` is accepted and ignored — e.g. `filecopy /tmp/out.zip /home/xxx/y.zip`.
 - **Never overwrites**: if the destination already exists, the command fails. Missing parent directories are created automatically.
-- Protocol is chosen with `FILE_COPY_TYPE` (default `smb`). New protocols are added as `filecopy-<type>` backends; only `smb` ships today. It reuses the same `SMB_HOST` / `SMB_USERNAME` / `SMB_PASSWORD` / `SMB_SHARE` variables as the mount.
+- Protocol is chosen with `FILE_COPY_TYPE` (default `smb`). New protocols are added as `filecopy-<type>` backends; only `smb` ships today.
 
 ```bash
 docker run --rm \
@@ -74,7 +50,7 @@ docker run --rm \
   -e SMB_PASSWORD=secret \
   -e SMB_SHARE=artifacts \
   -v "$PWD/out.zip":/tmp/out.zip:ro \
-  ghcr.io/<owner>/github-actions-runner-a:0.3.0 \
+  ghcr.io/<owner>/github-actions-runner-a:0.4.0 \
   filecopy /tmp/out.zip /home/xxx/y.zip
 ```
 
@@ -92,12 +68,11 @@ docker run --rm \
 | `RUNNER_LABELS` | no | Extra labels (default: runner defaults) |
 | `RUNNER_GROUP` | no | Runner group (default: `Default`) |
 | `RUNNER_WORKDIR` | no | Work directory relative to `/home/runner` (default: `_work`) |
-| `SMB_HOST` | no | SMB server host/IP. When set, the share is mounted on start |
-| `SMB_USERNAME` | conditional | SMB username (required when `SMB_HOST` is set) |
-| `SMB_PASSWORD` | conditional | SMB password (required when `SMB_HOST` is set) |
-| `SMB_SHARE` | conditional | Share name (required when `SMB_HOST` is set) |
-| `SMB_MOUNT_POINT` | no | Mount point (default `/mnt/smb`) |
 | `FILE_COPY_TYPE` | no | Protocol used by `filecopy` (default `smb`) |
+| `SMB_HOST` | when using `filecopy` | SMB server host/IP (connection only; never mounts) |
+| `SMB_USERNAME` | when using `filecopy` | SMB username |
+| `SMB_PASSWORD` | when using `filecopy` | SMB password |
+| `SMB_SHARE` | when using `filecopy` | Share name |
 
 ```bash
 cd github-actions-runner-a
@@ -114,7 +89,7 @@ One-shot MySQL + command (no runner registration):
 docker run --rm \
   -e MYSQL_ROOT_PASSWORD=secret \
   -e MYSQL_SCHEMA_NAME=app \
-  ghcr.io/<owner>/github-actions-runner-a:0.3.0 \
+  ghcr.io/<owner>/github-actions-runner-a:0.4.0 \
   gh --version
 ```
 
@@ -124,4 +99,4 @@ Smoke test (from repo root or this directory):
 ./scripts/test.sh
 ```
 
-Image (after publish): `ghcr.io/<owner>/github-actions-runner-a:0.2.0`
+Image (after publish): `ghcr.io/<owner>/github-actions-runner-a:0.4.0`
