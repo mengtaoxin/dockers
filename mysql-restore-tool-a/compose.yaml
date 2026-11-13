@@ -1,0 +1,13 @@
+# One-shot helper. Example:
+#   VERSION=$(tr -d '[:space:]' < VERSION) docker compose run --rm restore --file mysql-backup-YYYYMMdd-HHmmss.zip
+services:
+  restore:
+    image: ghcr.io/${GITHUB_OWNER:-local}/mysql-restore-tool-a:${VERSION:-0.1.0}
+    build:
+      context: ..
+      dockerfile: mysql-restore-tool-a/Dockerfile
+    environment:
+      BACKUP_DIR: /backup
+    volumes:
+      - ${BACKUP_HOST_DIR:-./backup}:/backup
+    # Intentionally no restart policy: one-shot via `docker compose run --rm`.

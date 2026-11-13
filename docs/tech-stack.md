@@ -3,9 +3,9 @@
 ## Images and runtime
 
 - **Docker** with **Docker Compose** (`compose.yaml` per stack); images are published to **GHCR** (`ghcr.io`).
-- Base images: **Ubuntu 24.04**, **Alpine 3.20**, and the official **`ghcr.io/actions/actions-runner`**.
+- Base images: **Ubuntu 24.04**, **Alpine 3.20**, official **`mysql:8.0`**, **`phpmyadmin:5.2.3`**, and **`ghcr.io/actions/actions-runner`**.
 - **Node.js 24**, pinned per stack via a build arg and installed from the official tarball.
-- **MySQL 8**, installed from apt and run as a process inside the container.
+- **MySQL 8**, either process-local from apt (`ubuntu-a`, `github-actions-runner-a`) or via the official `mysql:8.0` image (`mysql-server-a` / `mysql-restore-tool-a`).
 - **Playwright 1.64.1**: `ubuntu-b` bakes the Chromium / Firefox / WebKit browsers; `ubuntu-a` installs only the Chromium OS libraries.
 
 ## Build and CI

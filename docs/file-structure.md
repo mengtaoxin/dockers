@@ -27,6 +27,8 @@ A directory counts as a stack when it contains both a `Dockerfile` and a `VERSIO
 | `ubuntu-a/` | Ubuntu 24.04 | Node.js 24 + process-local MySQL 8 |
 | `ubuntu-b/` | Ubuntu 24.04 | Node.js 24 + preinstalled Playwright browsers |
 | `github-actions-runner-a/` | official actions-runner | Ephemeral Actions runner + MySQL / filecopy (SMB) |
+| `mysql-server-a/` | `mysql:8.0` (backup-tool) | MySQL 8 + phpMyAdmin compose; scheduled mysqldump backups |
+| `mysql-restore-tool-a/` | `mysql:8.0` | One-shot: backup zip → mountable MySQL datadir |
 
 ## Build context
 
@@ -36,6 +38,8 @@ Stacks that use the shared `scripts/` are built from the **repo root** so those 
 docker build -f ubuntu-a/Dockerfile .
 ```
 
-`hello-world/` is self-contained and builds with its own directory as the context.
+`hello-world/` is self-contained and builds with its own directory as the context locally; CI still uses the repo-root context for every stack.
+
+`mysql-server-a/` and `mysql-restore-tool-a/` also build from the **repo root** (their Dockerfiles `COPY <stack>/scripts/...`).
 
 See [commands.md](./commands.md) for everyday commands and [testing.md](./testing.md) for the smoke tests.
