@@ -167,6 +167,13 @@ if [[ "${got_plugin}" != "mysql_native_password" ]]; then
   exit 1
 fi
 
+bind_addr="$(docker exec "${NAME}" mysql --socket=/var/run/mysqld/mysqld.sock -N -uroot -ptestpass -e \
+  "SHOW VARIABLES LIKE 'bind_address';" | awk '{print $2}')"
+if [[ "${bind_addr}" != "0.0.0.0" ]]; then
+  echo "expected bind_address=0.0.0.0, got ${bind_addr}" >&2
+  exit 1
+fi
+
 pma_ok=0
 for _ in $(seq 1 30); do
   code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${HOST_PMA_PORT}/" || true)"

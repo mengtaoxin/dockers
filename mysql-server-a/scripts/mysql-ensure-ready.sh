@@ -52,7 +52,9 @@ write_runtime_cnf() {
   mysql_tz="$(derive_mysql_tz)"
   plugin="$(auth_plugin)"
 
-  cat > /etc/mysql/mysql.conf.d/docker.cnf <<EOF
+  # zz- so this loads after distro mysqld.cnf (which sets bind-address=127.0.0.1).
+  rm -f /etc/mysql/mysql.conf.d/docker.cnf
+  cat > /etc/mysql/mysql.conf.d/zz-docker.cnf <<EOF
 [mysqld]
 bind-address = ${MYSQL_BIND_ADDRESS}
 mysqlx-bind-address = ${MYSQL_BIND_ADDRESS}

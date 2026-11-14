@@ -14,11 +14,13 @@ rm -rf /var/lib/mysql/*
 chown mysql:mysql /var/lib/mysql
 usermod -d /var/lib/mysql mysql
 
+# zz- so this loads after distro mysqld.cnf (which sets bind-address=127.0.0.1).
+rm -f /etc/mysql/mysql.conf.d/docker.cnf
 printf '%s\n' \
   '[mysqld]' \
   "bind-address = ${MYSQL_BIND_ADDRESS}" \
   "mysqlx-bind-address = ${MYSQL_BIND_ADDRESS}" \
   'skip-name-resolve' \
-  > /etc/mysql/mysql.conf.d/docker.cnf
+  > /etc/mysql/mysql.conf.d/zz-docker.cnf
 
 mysqld --version
